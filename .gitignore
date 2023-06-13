@@ -2,10 +2,12 @@
 # vscode
 
 # conda
-environment.yml
 
 
 # secrets
+
+# Remote desktop settings
+MyDRE_RDP.py
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python,jupyternotebooks,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,jupyternotebooks,visualstudiocode

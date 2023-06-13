@@ -1,0 +1,9 @@
+name: BPD
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - jupyterlab
+  - numpy
+  - pandas
+prefix: /Users/Joris/Developer/BPD_thesis_scripts.nosync/.env
