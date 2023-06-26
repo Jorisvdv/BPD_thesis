@@ -1,11 +1,17 @@
 # %%
 ## Import packages
-from Utilities import load_static
+import pickle
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pickle
-from pathlib import Path
+from Utilities import (
+    PROCESSED_DATA_FOLDER,
+    PROCESSED_STATIC_FILE_NAME,
+    UTILITIES_SCRIPT_LOCATION,
+    load_static,
+)
 
 # %%
 ## Import data
@@ -13,7 +19,7 @@ from pathlib import Path
 # find location of script and set manual location for use in ipython
 
 # Read csv file
-data_static = load_static()
+data_static: pd.DataFrame = load_static()
 
 # %%
 # Count number of rows and columns
@@ -63,6 +69,7 @@ data_static_cleaned.iloc[[39, 561]]
 data_static_cleaned = data_static_cleaned.astype({"ZIS": "string"})
 data_static_cleaned = data_static_cleaned.set_index("ZIS")
 
+# TODO: Itergrate with temporal data
 columns_to_drop = ["PT_gb", "Opndat", "Exclusion"]  # , "Furosemide", "DEXA"]
 data_static_cleaned = data_static_cleaned.drop(columns_to_drop, axis=1)
 
@@ -103,23 +110,21 @@ CorrelationMatrix.style.applymap(
 
 # %%
 # Save transformed data
-utilities_script_location = "Z:/joris.vandervorst/Scripts_Joris/Utilities.py"
-data_folder = "processed_data"  # Specify folder name
-file_name = "testBPD3_cleaned.pkl"  # Specify file name
+# UTILITIES_SCRIPT_LOCATION = "Z:/joris.vandervorst/Scripts_Joris/Utilities.py"
+# PROCESSED_DATA_FOLDER = "processed_data"  # Specify folder name
+# PROCESSED_STATIC_FILE_NAME = "testBPD3_cleaned.pkl"  # Specify file name
 
 
 def save_data(df, data_location):
-
     data_location = Path(data_location)
     if not data_location.is_absolute():
         script_location = (
             Path(__file__)
             if "__file__" in globals()
-            else Path(utilities_script_location)
+            else Path(UTILITIES_SCRIPT_LOCATION)
         )
-
-    # Transform data folder to absolute path
-    data_location = script_location.parent.parent / data_location
+        # Transform data folder to absolute path
+        data_location = script_location.parent.parent / data_location
 
     if data_location.exists():
         print(f"{data_location} already exists, no data saved")
@@ -129,4 +134,4 @@ def save_data(df, data_location):
             print(f"Data saved at {data_location}")
 
 
-save_data(data_static_cleaned, data_folder + "/" + file_name)
+save_data(data_static_cleaned, PROCESSED_DATA_FOLDER + "/" + PROCESSED_STATIC_FILE_NAME)
