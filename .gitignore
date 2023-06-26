@@ -1,5 +1,6 @@
 ### user config ###
 # vscode
+VS Code/*
 
 # conda
 
@@ -8,6 +9,8 @@
 
 # Remote desktop settings
 MyDRE_RDP.py
+MyDRE_RDP.app
+app.ico
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python,jupyternotebooks,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,jupyternotebooks,visualstudiocode
@@ -238,3 +241,4 @@ cython_debug/
 *.code-workspace
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,python,jupyternotebooks,visualstudiocode
+

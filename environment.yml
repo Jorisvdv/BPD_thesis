@@ -1,4 +1,4 @@
-name: BPD
+name: /Users/Joris/Developer/BPD_thesis_scripts.nosync/.env
 channels:
   - conda-forge
 dependencies:
@@ -6,4 +6,13 @@ dependencies:
   - jupyterlab
   - numpy
   - pandas
+  - scikit-learn
+  - ca-certificates
+  - certifi
+  - openssl
+  - pytorch::pytorch
+  - torchaudio
+  - lightning
+  - flake8
+  - pylint
 prefix: /Users/Joris/Developer/BPD_thesis_scripts.nosync/.env
