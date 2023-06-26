@@ -11,16 +11,19 @@ Helper files for models predicting BPD
 
 import datetime
 import pickle
-from collections import defaultdict
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import (RocCurveDisplay, accuracy_score, f1_score,
-                             roc_auc_score, roc_curve)
-from sklearn.model_selection import (GridSearchCV, StratifiedKFold,
-                                     cross_validate)
+from sklearn.metrics import (
+    RocCurveDisplay,
+    accuracy_score,
+    f1_score,
+    roc_auc_score,
+    roc_curve,
+)
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
 
 # from sklearn import preprocessing
 
@@ -45,10 +48,10 @@ random_state = 42
 # <codecell> Import data
 # Import data
 
+
 # Import data from csv file using pathlib to specify path relative to script
 # find location of script and set manual location for use in ipython
 def load_static(file_location=None, cleaned_data=False):
-
     if file_location is None:
         script_location = (
             Path(__file__)
@@ -79,6 +82,21 @@ def load_static(file_location=None, cleaned_data=False):
 
 
 def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
+    """
+    Perform nested cross-validation to evaluate a model's performance.
+
+    Parameters:
+    model (sklearn estimator): The model to evaluate.
+    X (pandas.DataFrame): The feature matrix.
+    y (pandas.Series): The target variable.
+    parameters (dict, optional): The hyperparameters to tune using grid search.
+    inner_cv (int, optional): The number of folds for the inner cross-validation loop.
+    outer_cv (int, optional): The number of folds for the outer cross-validation loop.
+    verbose (int, optional): The verbosity level of the output.
+
+    Returns:
+    results (dict): A dictionary containing the evaluation results.
+    """
     if parameters is None:
         parameters = dict()
 
@@ -100,52 +118,70 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
         verbose=verbose,
     )
 
-    # Hardcoding scoring parameters for now
-    scoring = ["accuracy", "roc_auc", "f1"]
-
-    # TO DO: Adjust outer loop to StratifiedKFold
+    # Adjust outer loop to StratifiedKFold
     # Keep output as dict with the following items:
     # model_scores["test_accuracy"]: list of scores for each fold scored by accuracy_score
     # model_scores["test_roc_auc"]: list of scores for each fold scored by roc_auc_score
     # model_scores["test_f1"]: list of scores for each fold scored by f1_score
+    # model_scores["estimator"]: list of estimators for each fold
+    # model_scores["features"]: list of features used for each fold
+    # model_scores["roc_curve"]: list of roc curves for each fold
 
-    # Option: create empty np arrays and fill using fold-1 indexing (np.empty(inner_cv))
+    model_scores = dict()
+    model_scores["test_accuracy"] = np.empty(outer_cv)
+    model_scores["test_roc_auc"] = np.empty(outer_cv)
+    model_scores["test_f1"] = np.empty(outer_cv)
+    model_scores["estimator"] = list()
+    model_scores["features"] = list()
+    model_scores["roc_curve"] = list()
+    # Create a subplot for each fold
+    fig, ax = plt.subplots()
 
-    # model_scores = defaultdict(list)
+    for fold, (trainidx, testidx) in enumerate(outer_cv_folds.split(X, y)):
+        X_train, y_train = X.loc[X.index[trainidx]], y.loc[y.index[trainidx]]
+        X_test, y_test = X.loc[X.index[testidx]], y.loc[y.index[testidx]]
 
-    # for fold, (trainidx, testidx) in enumerate(outer_cv_folds.split(X, y)):
-    #     X_train, y_train = X.loc[X.index[trainidx]], y.loc[y.index[trainidx]]
-    #     X_test, y_test = X.loc[X.index[testidx]], y.loc[y.index[testidx]]
+        # Run inner loop using classifier (GridSearchCV object)
+        inner = classifier.fit(X_train, y_train)
+        # Extract best estimator from inner loop trained on full dataset (refit=True)
+        # Save estimator in model scores
+        model_scores["estimator"].append(inner)
 
-    #     # Run inner loop using classifier (GridSearchCV object)
-    #     inner = classifier.fit(X_train, y_train)
-    #     # Extract best estimator from inner loop trained on full dataset (refit=True)
-    #     best_inner = inner
-    #     # Save estimator in model scores
-    #     model_scores["estimator"].append(best_inner)
+        # Save features used in model in model scores
+        model_scores["features"].append(X_train.columns)
 
-    #     # Predict and get predicted class and probability scores for use in scoring
-    #     y_pred = inner.predict(X_test)
-    #     y_pred_proba = inner.predict_proba(X_test)
+        # Predict and get predicted class and probability scores for use in scoring
+        y_pred = inner.predict(X_test)
+        y_pred_proba = inner.predict_proba(X_test)
 
-    #     # Calculate score metrics and save in defaultdict
-    #     model_scores["test_accuracy"].append(accuracy_score(y_test, y_pred))
-    #     model_scores["test_roc_auc"].append(roc_auc_score(y_test, y_pred))
-    #     model_scores["test_f1"].append(f1_score(y_test, y_pred))
+        # Calculate score metrics and save
+        model_scores["test_accuracy"][fold] = accuracy_score(y_test, y_pred)
+        model_scores["test_roc_auc"][fold] = roc_auc_score(y_test, y_pred_proba[:, 1])
+        model_scores["test_f1"][fold] = f1_score(y_test, y_pred)
 
-    # print(model_scores)
-    # TO DO: Create roc_curve output for combined roc curves
+        # Create roc curve using ROCCruveDisplay
+
+        # Plot roc curve
+
+        roc_curve_plot = RocCurveDisplay.from_estimator(
+            inner, X_test, y_test, name=f"ROC fold {fold+1}", ax=ax
+        )
+
+        model_scores["roc_curve"].append(roc_curve_plot)  # Save roc curve
 
     # Outer loop using scikit learn own cross_validate loop
     # cross_validate runs the outer loop and the classifier (GridSearchCV) runs the inner loop
     # Hardcoding scoring parameters
-    scoring = ["accuracy", "roc_auc", "f1"]
-    results = cross_validate(
-        classifier, X, y, cv=outer_cv_folds, scoring=scoring, return_estimator=True
-    )
+    # scoring = ["accuracy", "roc_auc", "f1"]
+    # results = cross_validate(
+    #     classifier, X, y, cv=outer_cv_folds, scoring=scoring, return_estimator=True
+    # )
     # print(results)
 
-    return results
+    return model_scores
+
+
+# <codecell> Print scores
 
 
 def print_scores(model_scores):
@@ -156,26 +192,115 @@ def print_scores(model_scores):
     )
 
     print(f"Accuracy score {accuracy.mean():%}, sd {accuracy.std():%}")
-    print(f"AUC score: {auc_score.mean():4f}, sd {auc_score.std():4f}")
-    print(f"F1 score: {f1.mean():4f}, sd {f1.std():4f}")
+    print(f"AUC score: {auc_score.mean():.4f}, sd {auc_score.std():.4f}")
+    print(f"F1 score: {f1.mean():.4f}, sd {f1.std():.4f}")
 
 
-# TO DO: Plot ROC curve using roc_curve key from model_scores (not yet created)
-# def plot_roc_curve(model_scores):
-# plt.plot(fpr, tpr, linewidth=2, label=None)
-# plt.plot([0, 1], [0, 1], "k--")
-# plt.axis([0, 1, 0, 1])
-# plt.xlabel("False Positive Rate")
-# plt.ylabel("True Positive Rate")
-# plt.show()
+# <codecell> Plot roc curve
+def create_roc_curve(model_scores, model_name=None):
+    """
+    Creates a ROC curve plot from the model scores dictionary.
+
+    Parameters:
+    model_scores (dict): A dictionary containing the model scores.
+    model_name (str, optional): The name of the model to include in the plot title.
+
+    Returns:
+    fig (matplotlib.figure.Figure): The matplotlib figure object containing the ROC curve plot.
+    """
+
+    # Create a subplot to plot all roc curves
+    fig, ax = plt.subplots()
+
+    # Create numpy array of all tpr and values for use in calculating mean tpr and auc
+    mean_fpr = np.linspace(0, 1, 100)
+    all_tpr = np.empty((mean_fpr.shape[0], len(model_scores["roc_curve"])), dtype=float)
+    all_auc = np.empty((len(model_scores["roc_curve"])), dtype=float)
+
+    # Iterate over all roc curves and plot on ax and save tpr values in mean_tpr
+    for fold, roc_curve_plot in enumerate(model_scores["roc_curve"]):
+        roc_curve_plot.plot(ax=ax, alpha=0.7)
+        # Interpolate tpr values to mean_fpr because not all roc curves have the same amount of tpr values
+        all_tpr[:, fold] = np.interp(mean_fpr, roc_curve_plot.fpr, roc_curve_plot.tpr)
+        # Set first value of tpr to 0
+        all_tpr[0, fold] = 0.0
+        # Append auc to all_acu
+        all_auc[fold] = roc_curve_plot.roc_auc
+
+    # Plot random guessing line
+    ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="r", label="Chance", alpha=0.7)
+
+    # Plot mean ROC curve
+
+    mean_tpr = np.mean(all_tpr, axis=1)
+    mean_auc = np.mean(all_auc)
+    std_auc = np.std(all_auc)
+
+    ax.plot(
+        mean_fpr,
+        mean_tpr,
+        color="b",
+        label=f"Mean ROC (AUC = {mean_auc:.2f} \u00B1 {std_auc:.2f})",
+        lw=2,
+        alpha=0.9,
+    )
+
+    # Plot standard deviation area
+    std_tpr = np.std(all_tpr, axis=1)
+    tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+    tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+    ax.fill_between(
+        mean_fpr,
+        tprs_lower,
+        tprs_upper,
+        color="grey",
+        alpha=0.2,
+        label=r"$\pm$ 1 std. dev.",
+    )
+
+    # Add subtext to figure with selected parameters
+    if model_name is not None:
+        fig.text(
+            0.5,
+            0.1,
+            f"Selected parameters: {model_name}",
+            wrap=True,
+            horizontalalignment="center",
+            transform=ax.transAxes,
+        )
+    #         0.5,
+    #         0.1,
+    #         f"Selected parameters: {model_name}",
+    #         wrap=True,
+    #         horizontalalignment="center",
+    #         transform=ax.transAxes,
+    #     )
+
+    # # Set axis limits
+    # ax.set(
+    #     xlim=[-0.05, 1.05],
+    #     ylim=[-0.05, 1.05],
+    # )
+
+    # Add title and legend
+    ax.set_title(f"ROC curve for {model_name}")
+    ax.legend()  # loc="lower right")
+
+    # Return figure
+    return fig
+
+
 # <codecell> Export model and metrics
 # Export model and load model
 
 
 def export_model_and_scores(
-    name_model, folder_location=None, model=None, model_scores=None, selected_parameters=None
+    name_model,
+    folder_location=None,
+    model=None,
+    model_scores=None,
+    selected_parameters=None,
 ):
-
     if folder_location is None:
         script_location = (
             Path(__file__)
@@ -198,7 +323,7 @@ def export_model_and_scores(
 
     if model_scores is not None:
         # Export model to txt file
-        metrics_file_name = name_model + "_" + date_time + ".txt"
+        metrics_file_name = name_model + "_" + date_time
 
         accuracy, auc_score, f1 = (
             model_scores["test_accuracy"],
@@ -206,10 +331,14 @@ def export_model_and_scores(
             model_scores["test_f1"],
         )
 
-        with open(metrics_folder_location / metrics_file_name, "w") as f:
+        with open(
+            metrics_folder_location / (metrics_file_name + ".txt"),
+            "w",
+            encoding="utf-8",
+        ) as f:
             print(f"Model type: {name_model}", file=f)
             if selected_parameters is not None:
-                print(f"Selected parameters:",*selected_parameters, file=f)
+                print("Selected parameters:", *selected_parameters, file=f)
             print(f"AUC score: {auc_score.mean():4f}, sd {auc_score.std():4f}", file=f)
             print(f"Accuracy score {accuracy.mean():%}, sd {accuracy.std():%}", file=f)
             print(f"F1 score: {f1.mean():4f}, sd {f1.std():4f}", file=f)
@@ -217,15 +346,20 @@ def export_model_and_scores(
             # print("Precision: ", precision.mean(), file = f)
             # print("Recall: ", recall.mean(), file = f)
 
+        # Save model ROC curve plot
+        create_roc_curve(model_scores, model_name=name_model).savefig(
+            metrics_folder_location / (metrics_file_name + ".png")
+        )
 
+
+# <codecell> Load model
 def load_model(model_file):
-
     # Covert model file name to path
     model_file = Path(model_file)
 
-    # Check if path is absolute, otherwise use relative location defined in this script
+    # Check if path is absolute,
+    # otherwise use relative location defined in this script
     if not model_file.is_absolute():
-
         script_location = (
             Path(__file__)
             if "__file__" in globals()
@@ -234,7 +368,8 @@ def load_model(model_file):
         project_location = script_location.parent.parent
 
         # Choose most recent file of model name
-        # In oder to pick specific time stamp specify exact name, otherwise the most recently created file that matches the regex is chosen
+        # In oder to pick specific time stamp specify exact name
+        # otherwise the most recently created file that matches the regex is chosen
         model_folder_location = project_location / model_folder
         model_files = model_folder_location.glob(f"{model_file}*.pkl")
         model_file = max(model_files, key=lambda item: item.stat().st_ctime)
@@ -242,11 +377,3 @@ def load_model(model_file):
     # Load model from pickle file
     with open(model_file, "rb") as f:
         return pickle.load(f)
-
-
-#     # Save plot
-# Create string with date and time to append to file name
-# time_now = datetime.datetime.now()
-# date_time = time_now.strftime("%Y%m%d_%H%M%S")
-#     plot_name = name_models + date_time + '.png'
-#     plt.savefig(project_location / metrics_folder /plot_name)

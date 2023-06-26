@@ -11,9 +11,10 @@ Logistic regression of static dataset for the prediction of BPD
 
 import datetime
 
-# import matplotlib.pyplot as plt
-# import numpy as np
-# import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
 # from sklearn import preprocessing
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import (
@@ -23,7 +24,10 @@ from sklearn.model_selection import (
     train_test_split,
 )
 
+# <codecell> Utilities
+# Import utilities
 from Utilities import (
+    create_roc_curve,
     export_model_and_scores,
     load_model,
     load_static,
@@ -43,8 +47,16 @@ export = True
 # Import data from csv file using pathlib to specify path relative to script
 # find location of script and set manual location for use in ipython
 
-# Read csv file
-data_static = load_static(cleaned_data=True)
+# # Read csv file
+# data_static = load_static(cleaned_data=True)
+
+# Load iris dataset as toy example for local testing
+from sklearn.datasets import load_iris
+
+data_static = load_iris(as_frame=True).frame
+# Select only two classes
+# data_static = data_static[data_static["target"] < 2]
+
 
 # <codecell> Data features
 # Show column names
@@ -56,14 +68,25 @@ print(*data_static.columns)
 
 # <codecell> Fit Logistic regression
 # Logistic regression
+# selected_parameters = [
+#     "Furosemide",
+#     "DEXA",
+# ]
+
+# # Split data into features and target
+# X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
+# y = data_static["y"]
+
 selected_parameters = [
-    "Furosemide",
-    "DEXA",
+    "sepal length (cm)",
+    "sepal width (cm)",
+    "petal length (cm)",
+    "petal width (cm)",
 ]
 
 # Split data into features and target
 X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
-y = data_static["y"]
+y = data_static["target"].where(data_static["target"] == 1, 0)
 
 # Create logistic regression model
 log_reg = LogisticRegression(multi_class="ovr", max_iter=10000)
@@ -86,20 +109,18 @@ model_scores = nested_CV(
 
 print_scores(model_scores)
 
+# <codecell> Plot ROC curve
+# Plot ROC curve
 
-# # Plot ROC curve
-
-# plt.plot(fpr, tpr, linewidth=2, label=None)
-# plt.plot([0, 1], [0, 1], "k--")
-# plt.axis([0, 1, 0, 1])
-# plt.xlabel("False Positive Rate")
-# plt.ylabel("True Positive Rate")
-# plt.show()
+fig_test = create_roc_curve(model_scores=model_scores, model_name=name_model)
+fig_test.show()
+fig_test.savefig("roc_curve_test.png")
 
 
 # <codecell> Export model and metrics
 # Export model
 
+# Select model with highest test accuracy to export
 if export:
     model = model_scores["estimator"][
         model_scores["test_accuracy"].argmax()

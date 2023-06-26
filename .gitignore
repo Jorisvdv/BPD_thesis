@@ -12,6 +12,10 @@ MyDRE_RDP.py
 MyDRE_RDP.app
 app.ico
 
+# Local models and metrics
+models/*
+metrics/*
+
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python,jupyternotebooks,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,jupyternotebooks,visualstudiocode
 
