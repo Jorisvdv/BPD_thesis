@@ -17,10 +17,9 @@ from sklearn.linear_model import LogisticRegression
 
 # <codecell> Utilities
 # Import utilities
-from Utilities import (
+from Utilities import (  # load_model,
     create_roc_curve,
     export_model_and_scores,
-    load_model,
     load_static,
     nested_CV,
     print_scores,
@@ -28,17 +27,17 @@ from Utilities import (
 
 # <codecell> Settings
 # Script settings
-name_model = "log_reg_static"
-random_state = 42
-export = True
+NAME_MODEL = "log_reg_static"
+RANDOM_STATE = 42
+EXPORT = True
 
 # <codecell> Parameters
-# selected_parameters = [
+# SELECTED_PARAMETERS = [
 #     "Furosemide",
 #     "DEXA",
 # ]
 
-selected_parameters = [
+SELECTED_PARAMETERS = [
     "sepal length (cm)",
     "sepal width (cm)",
     "petal length (cm)",
@@ -46,9 +45,6 @@ selected_parameters = [
 ]
 
 TARGET = "target"  # "y"
-# # Split data into features and target
-# X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
-# y = data_static["y"]
 
 
 # <codecell> Import data
@@ -70,7 +66,7 @@ data_static = load_iris(as_frame=True).frame
 
 # <codecell> Data features
 # Show column names
-print(f" Column names: ")
+print(" Column names: ")
 print(*data_static.columns)
 
 
@@ -79,7 +75,7 @@ print(*data_static.columns)
 
 
 # Split data into features and target
-X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
+X = data_static.loc[:, SELECTED_PARAMETERS]  # .drop("y", axis=1)
 y = data_static[TARGET].where(data_static["target"] == 1, 0)
 
 # Create logistic regression model
@@ -106,7 +102,7 @@ print_scores(model_scores)
 # <codecell> Plot ROC curve
 # Plot ROC curve
 
-fig_test = create_roc_curve(model_scores=model_scores, model_name=name_model)
+fig_test = create_roc_curve(model_scores=model_scores, model_name=NAME_MODEL)
 plt.show()
 # fig_test.savefig("roc_curve_test.png")
 
@@ -115,16 +111,16 @@ plt.show()
 # Export model
 
 # Select model with highest test accuracy to export
-if export:
+if EXPORT:
     model = model_scores["estimator"][
         model_scores["test_accuracy"].argmax()
     ].best_estimator_
 
     export_model_and_scores(
-        name_model=name_model,
+        name_model=NAME_MODEL,
         model=model,
         model_scores=model_scores,
-        selected_parameters=selected_parameters,
+        selected_parameters=SELECTED_PARAMETERS,
     )
 
     # # Save plot

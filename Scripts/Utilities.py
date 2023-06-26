@@ -17,14 +17,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibrationDisplay
-from sklearn.metrics import (
+from sklearn.metrics import (  # roc_curve,
     RocCurveDisplay,
     accuracy_score,
     f1_score,
     roc_auc_score,
-    roc_curve,
 )
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
+from sklearn.model_selection import GridSearchCV, StratifiedKFold  # , cross_validate
 
 # from sklearn import preprocessing
 
@@ -33,18 +32,18 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validat
 # <codecell> Settings
 # Script settings
 
-utilities_script_location = "Z:/joris.vandervorst/Scripts_Joris/Utilities.py"
+UTILITIES_SCRIPT_LOCATION = "Z:/joris.vandervorst/Scripts_Joris/Utilities.py"
 
-data_folder = "data"  # Specify folder name
-file_name = "testBPD3.csv"  # Specify file name
+DATA_FOLDER = "data"  # Specify folder name
+STATIC_FILE_NAME = "testBPD3.csv"  # Specify file name
 
-processed_data_folder = "processed_data"  # Specify folder name
-processed_file_name = "testBPD3_cleaned.pkl"  # Specify file name
+PROCESSED_DATA_FOLDER = "processed_data"  # Specify folder name
+PROCESSED_STATIC_FILE_NAME = "testBPD3_cleaned.pkl"  # Specify file name
 
-model_folder = "models"
-metrics_folder = "metrics"
+MODEL_FOLDER = "models"
+METRICS_FOLDER = "metrics"
 
-random_state = 42
+RANDOM_STATE = 42
 
 # <codecell> Import data
 # Import data
@@ -57,16 +56,16 @@ def load_static(file_location=None, cleaned_data=False):
         script_location = (
             Path(__file__)
             if "__file__" in globals()
-            else Path(utilities_script_location)
+            else Path(UTILITIES_SCRIPT_LOCATION)
         )
         project_location = script_location.parent.parent
 
         if cleaned_data:
             file_location = (
-                project_location / processed_data_folder / processed_file_name
+                project_location / PROCESSED_DATA_FOLDER / PROCESSED_STATIC_FILE_NAME
             )
         else:
-            file_location = project_location / data_folder / file_name
+            file_location = project_location / DATA_FOLDER / STATIC_FILE_NAME
 
     # Change loading function based on suffix
     if file_location.suffix == ".csv":
@@ -103,10 +102,10 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
 
     # Create inner and outer StratifiedKFold loops (to keep random state the save and in order to change outer loop in th future)
     inner_cv_folds = StratifiedKFold(
-        n_splits=inner_cv, shuffle=True, random_state=random_state
+        n_splits=inner_cv, shuffle=True, random_state=RANDOM_STATE
     )
     outer_cv_folds = StratifiedKFold(
-        n_splits=outer_cv, shuffle=True, random_state=random_state
+        n_splits=outer_cv, shuffle=True, random_state=RANDOM_STATE
     )
 
     # Inner loop classifier
@@ -331,15 +330,15 @@ def export_model_and_scores(
         script_location = (
             Path(__file__)
             if "__file__" in globals()
-            else Path(utilities_script_location)
+            else Path(UTILITIES_SCRIPT_LOCATION)
         )
-    # Create string with date and time to append to file name
+        folder_location = script_location.parent.parent
+
     time_now = datetime.datetime.now()
     date_time = time_now.strftime("%Y%m%d_%H%M%S")
 
-    project_location = script_location.parent.parent
-    model_folder_location = project_location / model_folder
-    metrics_folder_location = project_location / metrics_folder
+    model_folder_location = folder_location / MODEL_FOLDER
+    metrics_folder_location = folder_location / METRICS_FOLDER
 
     if model is not None:
         # Export model to pickle file
@@ -394,14 +393,14 @@ def load_model(model_file):
         script_location = (
             Path(__file__)
             if "__file__" in globals()
-            else Path(utilities_script_location)
+            else Path(UTILITIES_SCRIPT_LOCATION)
         )
         project_location = script_location.parent.parent
 
         # Choose most recent file of model name
         # In oder to pick specific time stamp specify exact name
         # otherwise the most recently created file that matches the regex is chosen
-        model_folder_location = project_location / model_folder
+        model_folder_location = project_location / MODEL_FOLDER
         model_files = model_folder_location.glob(f"{model_file}*.pkl")
         model_file = max(model_files, key=lambda item: item.stat().st_ctime)
 
