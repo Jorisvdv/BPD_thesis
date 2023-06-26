@@ -45,6 +45,9 @@ METRICS_FOLDER = "metrics"
 
 RANDOM_STATE = 42
 
+SCORING_INNER = ["accuracy", "roc_auc", "f1"]
+REFIT_INNER = "roc_auc"
+
 # <codecell> Import data
 # Import data
 
@@ -78,6 +81,41 @@ def load_static(file_location=None, cleaned_data=False):
             return pickle.load(f)
 
 
+# <codecell> Evaluation metrics
+def calculateMetrics(inner, X_test, y_test):
+    """
+    Calculate score metrics and curves for a given GridSearchCV object and test data.
+
+    Parameters:
+    inner (sklearn.model_selection.GridSearchCV): The GridSearchCV object trained on the inner loop.
+    X_test (pandas.DataFrame): The feature matrix for the test data.
+    y_test (pandas.Series): The target variable for the test data.
+
+    Returns:
+    metrics (dict): A dictionary containing the score metrics and curves.
+    """
+    y_pred = inner.predict(X_test)
+    y_pred_proba = inner.predict_proba(X_test)
+
+    metrics = dict()
+    metrics["accuracy"] = accuracy_score(y_test, y_pred)
+    metrics["roc_auc"] = roc_auc_score(y_test, y_pred_proba[:, 1])
+    metrics["f1"] = f1_score(y_test, y_pred)
+
+    # Create roc curve using ROCCurveDisplay
+    roc_curve_plot = RocCurveDisplay.from_estimator(inner, X_test, y_test)
+    plt.close()  # Prevent plot from showing in notebook
+
+    # Create calibration curve using CalibrationDisplay
+    calibration_curve_plot = CalibrationDisplay.from_estimator(inner, X_test, y_test)
+    plt.close()  # Prevent plot from showing in notebook
+
+    metrics["roc_curve"] = roc_curve_plot
+    metrics["calibration_curve"] = calibration_curve_plot
+
+    return metrics
+
+
 # <codecell> Nested CV and evaluate model
 
 
@@ -95,8 +133,20 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
     verbose (int, optional): The verbosity level of the output.
 
     Returns:
-    results (dict): A dictionary containing the evaluation results.
+    results (dict): A dictionary containing the evaluation results. The dictionary has the following keys:
+        - 'outer_scores' (numpy.ndarray): A 1D array of scores for each outer fold.
+        - 'inner_scores' (numpy.ndarray): A 2D array of scores for each inner fold. The first dimension corresponds to the outer fold, and the second dimension corresponds to the inner fold.
+        - 'best_params' (dict): The best hyperparameters found by grid search.
+        - 'test_score' (float): The test score of the best model.
     """
+    outer_scores = np.empty(outer_cv)
+    inner_scores = np.empty((outer_cv, inner_cv))
+    estimators = list()
+    features = list()
+    roc_curves = list()
+    calibration_curves = list()
+
+    #
     if parameters is None:
         parameters = dict()
 
@@ -108,34 +158,19 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
         n_splits=outer_cv, shuffle=True, random_state=RANDOM_STATE
     )
 
-    # Inner loop classifier
-    classifier = GridSearchCV(
-        estimator=model,
-        param_grid=parameters,
-        cv=inner_cv_folds,
-        refit=True,
-        n_jobs=(-1),
-        verbose=verbose,
+    # Create pd.DataFrame to store models and scores
+    model_scores = pd.DataFrame(
+        {
+            "test_accuracy": pd.Series(dtype="float"),
+            "test_roc_auc": pd.Series(dtype="float"),
+            "test_f1": pd.Series(dtype="float"),
+            "estimator": pd.Series(dtype="object"),
+            "features": pd.Series(dtype="object"),
+            "roc_curve": pd.Series(dtype="object"),
+            "calibration_curve": pd.Series(dtype="object"),
+        },
+        index=range(outer_cv),
     )
-
-    # Adjust outer loop to StratifiedKFold
-    # Keep output as dict with the following items:
-    # model_scores["test_accuracy"]: list of scores for each fold scored by accuracy_score
-    # model_scores["test_roc_auc"]: list of scores for each fold scored by roc_auc_score
-    # model_scores["test_f1"]: list of scores for each fold scored by f1_score
-    # model_scores["estimator"]: list of estimators for each fold
-    # model_scores["features"]: list of features used for each fold
-    # model_scores["roc_curve"]: list of roc curves for each fold
-    # model_scores["calibration_curve"]: list of calibration curves for each fold
-
-    model_scores = dict()
-    model_scores["test_accuracy"] = np.empty(outer_cv)
-    model_scores["test_roc_auc"] = np.empty(outer_cv)
-    model_scores["test_f1"] = np.empty(outer_cv)
-    model_scores["estimator"] = list()
-    model_scores["features"] = list()
-    model_scores["roc_curve"] = list()
-    model_scores["calibration_curve"] = list()
 
     # Loop over outer folds
     for fold, (trainidx, testidx) in enumerate(outer_cv_folds.split(X, y)):
@@ -143,42 +178,33 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
         X_test, y_test = X.loc[X.index[testidx]], y.loc[y.index[testidx]]
 
         # Run inner loop using classifier (GridSearchCV object)
+        classifier = GridSearchCV(
+            model,
+            parameters,
+            cv=inner_cv,
+            scoring=SCORING_INNER,
+            refit=REFIT_INNER,
+            verbose=verbose,
+        )
         inner = classifier.fit(X_train, y_train)
         # Extract best estimator from inner loop trained on full dataset (refit=True)
         # Save estimator in model scores
-        model_scores["estimator"].append(inner)
+        model_scores.at[fold, "estimator"] = inner.best_estimator_
 
         # Save features used in model in model scores
-        model_scores["features"].append(X_train.columns)
+        model_scores.at[fold, "features"] = X_train.columns
 
-        # Predict and get predicted class and probability scores for use in scoring
-        y_pred = inner.predict(X_test)
-        y_pred_proba = inner.predict_proba(X_test)
+        # Calculate score metrics
+        metrics = calculateMetrics(inner, X_test, y_test)
 
         # Calculate score metrics and save
-        model_scores["test_accuracy"][fold] = accuracy_score(y_test, y_pred)
-        model_scores["test_roc_auc"][fold] = roc_auc_score(y_test, y_pred_proba[:, 1])
-        model_scores["test_f1"][fold] = f1_score(y_test, y_pred)
-
-        # Create roc curve using ROCCurveDisplay
-        roc_curve_plot = RocCurveDisplay.from_estimator(
-            inner, X_test, y_test, name=f"ROC fold {fold+1}"
-        )
+        model_scores.at[fold, "test_accuracy"] = metrics["accuracy"]
+        model_scores.at[fold, "test_roc_auc"] = metrics["roc_auc"]
+        model_scores.at[fold, "test_f1"] = metrics["f1"]
         # Save roc curve in model scores
-        model_scores["roc_curve"].append(roc_curve_plot)
-
-        # Prevent plot from showing in notebook
-        plt.close()
-
-        # Create calibration curve using CalibrationDisplay
-        calibration_curve_plot = CalibrationDisplay.from_estimator(
-            inner, X_test, y_test, name=f"Calibration fold {fold+1}"
-        )
+        model_scores.at[fold, "roc_curve"] = metrics["roc_curve"]
         # Save calibration curve in model scores
-        model_scores["calibration_curve"].append(calibration_curve_plot)
-
-        # Prevent plot from showing in notebook
-        plt.close()
+        model_scores.at[fold, "calibration_curve"] = metrics["calibration_curve"]
 
     # Outer loop using scikit learn own cross_validate loop
     # cross_validate runs the outer loop and the classifier (GridSearchCV) runs the inner loop
