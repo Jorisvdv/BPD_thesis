@@ -9,20 +9,11 @@ Logistic regression of static dataset for the prediction of BPD
 # <codecell> Packages
 # Import packages
 
-import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-# from sklearn import preprocessing
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import (
-    GridSearchCV,
-    cross_val_predict,
-    cross_val_score,
-    train_test_split,
-)
 
 # <codecell> Utilities
 # Import utilities
@@ -40,6 +31,25 @@ from Utilities import (
 name_model = "log_reg_static"
 random_state = 42
 export = True
+
+# <codecell> Parameters
+# selected_parameters = [
+#     "Furosemide",
+#     "DEXA",
+# ]
+
+selected_parameters = [
+    "sepal length (cm)",
+    "sepal width (cm)",
+    "petal length (cm)",
+    "petal width (cm)",
+]
+
+TARGET = "target"  # "y"
+# # Split data into features and target
+# X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
+# y = data_static["y"]
+
 
 # <codecell> Import data
 # Import data
@@ -63,30 +73,14 @@ data_static = load_iris(as_frame=True).frame
 print(f" Column names: ")
 print(*data_static.columns)
 
-# columns_to_drop = ["Furosemide", "DEXA"]
-# data_static = data_static.drop(columns_to_drop, axis=1)
 
 # <codecell> Fit Logistic regression
 # Logistic regression
-# selected_parameters = [
-#     "Furosemide",
-#     "DEXA",
-# ]
 
-# # Split data into features and target
-# X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
-# y = data_static["y"]
-
-selected_parameters = [
-    "sepal length (cm)",
-    "sepal width (cm)",
-    "petal length (cm)",
-    "petal width (cm)",
-]
 
 # Split data into features and target
 X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
-y = data_static["target"].where(data_static["target"] == 1, 0)
+y = data_static[TARGET].where(data_static["target"] == 1, 0)
 
 # Create logistic regression model
 log_reg = LogisticRegression(multi_class="ovr", max_iter=10000)
@@ -113,8 +107,8 @@ print_scores(model_scores)
 # Plot ROC curve
 
 fig_test = create_roc_curve(model_scores=model_scores, model_name=name_model)
-fig_test.show()
-fig_test.savefig("roc_curve_test.png")
+plt.show()
+# fig_test.savefig("roc_curve_test.png")
 
 
 # <codecell> Export model and metrics

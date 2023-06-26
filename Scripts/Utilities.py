@@ -16,6 +16,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.calibration import CalibrationDisplay
 from sklearn.metrics import (
     RocCurveDisplay,
     accuracy_score,
@@ -126,6 +127,7 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
     # model_scores["estimator"]: list of estimators for each fold
     # model_scores["features"]: list of features used for each fold
     # model_scores["roc_curve"]: list of roc curves for each fold
+    # model_scores["calibration_curve"]: list of calibration curves for each fold
 
     model_scores = dict()
     model_scores["test_accuracy"] = np.empty(outer_cv)
@@ -134,9 +136,9 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
     model_scores["estimator"] = list()
     model_scores["features"] = list()
     model_scores["roc_curve"] = list()
-    # Create a subplot for each fold
-    fig, ax = plt.subplots()
+    model_scores["calibration_curve"] = list()
 
+    # Loop over outer folds
     for fold, (trainidx, testidx) in enumerate(outer_cv_folds.split(X, y)):
         X_train, y_train = X.loc[X.index[trainidx]], y.loc[y.index[trainidx]]
         X_test, y_test = X.loc[X.index[testidx]], y.loc[y.index[testidx]]
@@ -159,15 +161,25 @@ def nested_CV(model, X, y, parameters=None, inner_cv=5, outer_cv=5, verbose=0):
         model_scores["test_roc_auc"][fold] = roc_auc_score(y_test, y_pred_proba[:, 1])
         model_scores["test_f1"][fold] = f1_score(y_test, y_pred)
 
-        # Create roc curve using ROCCruveDisplay
-
-        # Plot roc curve
-
+        # Create roc curve using ROCCurveDisplay
         roc_curve_plot = RocCurveDisplay.from_estimator(
-            inner, X_test, y_test, name=f"ROC fold {fold+1}", ax=ax
+            inner, X_test, y_test, name=f"ROC fold {fold+1}"
         )
+        # Save roc curve in model scores
+        model_scores["roc_curve"].append(roc_curve_plot)
 
-        model_scores["roc_curve"].append(roc_curve_plot)  # Save roc curve
+        # Prevent plot from showing in notebook
+        plt.close()
+
+        # Create calibration curve using CalibrationDisplay
+        calibration_curve_plot = CalibrationDisplay.from_estimator(
+            inner, X_test, y_test, name=f"Calibration fold {fold+1}"
+        )
+        # Save calibration curve in model scores
+        model_scores["calibration_curve"].append(calibration_curve_plot)
+
+        # Prevent plot from showing in notebook
+        plt.close()
 
     # Outer loop using scikit learn own cross_validate loop
     # cross_validate runs the outer loop and the classifier (GridSearchCV) runs the inner loop
@@ -255,26 +267,8 @@ def create_roc_curve(model_scores, model_name=None):
         tprs_upper,
         color="grey",
         alpha=0.2,
-        label=r"$\pm$ 1 std. dev.",
+        label=f"\u00B1 1 SD",
     )
-
-    # Add subtext to figure with selected parameters
-    if model_name is not None:
-        fig.text(
-            0.5,
-            0.1,
-            f"Selected parameters: {model_name}",
-            wrap=True,
-            horizontalalignment="center",
-            transform=ax.transAxes,
-        )
-    #         0.5,
-    #         0.1,
-    #         f"Selected parameters: {model_name}",
-    #         wrap=True,
-    #         horizontalalignment="center",
-    #         transform=ax.transAxes,
-    #     )
 
     # # Set axis limits
     # ax.set(
@@ -286,7 +280,39 @@ def create_roc_curve(model_scores, model_name=None):
     ax.set_title(f"ROC curve for {model_name}")
     ax.legend()  # loc="lower right")
 
+    # TODO Add subtitle with selected parameters
+
     # Return figure
+    return fig
+
+
+# <codecell> Plot calibration curve
+def create_calibration_curve(model_scores, model_name=None):
+    """
+    Creates a calibration curve plot from the model scores dictionary.
+
+    Parameters:
+    model_scores (dict): A dictionary containing the model scores.
+    model_name (str, optional): The name of the model to include in the plot title.
+
+    Returns:
+    fig (matplotlib.figure.Figure): The matplotlib figure object containing the calibration curve plot.
+    """
+
+    # Create a subplot to plot all calibration curves
+    fig, ax = plt.subplots()
+
+    # Iterate over all calibration curves and plot on ax
+    for fold, calibration_curve_plot in enumerate(model_scores["calibration_curve"]):
+        calibration_curve_plot.plot(ax=ax, alpha=0.7)
+
+    # Return figure
+    # Add title and legend
+    ax.set_title(f"Calibration curve for {model_name}")
+    ax.legend()  # loc="lower right")
+
+    # TODO Add subtitle with selected parameters
+
     return fig
 
 
@@ -348,7 +374,12 @@ def export_model_and_scores(
 
         # Save model ROC curve plot
         create_roc_curve(model_scores, model_name=name_model).savefig(
-            metrics_folder_location / (metrics_file_name + ".png")
+            metrics_folder_location / (metrics_file_name + "_ROC" + ".png")
+        )
+
+        # Save calibration curve plot
+        create_calibration_curve(model_scores, model_name=name_model).savefig(
+            metrics_folder_location / (metrics_file_name + "_calibration" + ".png")
         )
 
 
