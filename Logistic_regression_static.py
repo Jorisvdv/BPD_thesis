@@ -6,127 +6,114 @@ Logistic regression of static dataset for the prediction of BPD
 @Date: 2023-06-13
 
 """
-## Import packages
+# <codecell> Packages
+# Import packages
 
-from pathlib import Path
+import datetime
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from sklearn import preprocessing
+# import matplotlib.pyplot as plt
+# import numpy as np
+# import pandas as pd
+# from sklearn import preprocessing
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score, roc_curve
-from sklearn.model_selection import cross_val_predict, cross_val_score
+from sklearn.model_selection import (
+    GridSearchCV,
+    cross_val_predict,
+    cross_val_score,
+    train_test_split,
+)
 
-## Import data
+from Utilities import (
+    export_model_and_scores,
+    load_model,
+    load_static,
+    nested_CV,
+    print_scores,
+)
+
+# <codecell> Settings
+# Script settings
+name_model = "log_reg_static"
+random_state = 42
+export = True
+
+# <codecell> Import data
+# Import data
+
 # Import data from csv file using pathlib to specify path relative to script
-
-# Manually specify path to data file if __file__ does not work
-
-
-# find location of script and go up two levels to find main project directory
-script_location = Path(__file__).absolute().parent.parent
-
-# script_location = Path(__file__).absolute().parent
-# # Find main project directory by going up one level
-# project_location = script_location.parent
-# data_folder = "data"  # Specify folder name
-# file_name = "static_data.csv"  # Specify file name
+# find location of script and set manual location for use in ipython
 
 # Read csv file
-data_static = pd.read_csv(script_location / data_folder / file_name)
+data_static = load_static(cleaned_data=True)
 
-# Count number of rows and columns
-data_static.shape
+# <codecell> Data features
+# Show column names
+print(f" Column names: ")
+print(*data_static.columns)
 
-# Show first 5 rows
-data_static.head()
+# columns_to_drop = ["Furosemide", "DEXA"]
+# data_static = data_static.drop(columns_to_drop, axis=1)
 
-# Show data types of columns
-data_static.dtypes
+# <codecell> Fit Logistic regression
+# Logistic regression
+selected_parameters = [
+    "Furosemide",
+    "DEXA",
+]
 
-# Check for missing values
-data_static.isnull().sum()
-
-# Check for duplicate rows
-data_static.duplicated().sum()
-
-
-## Data preprocessing
-# Drop columns that are not needed for the model
-columns_to_drop = ["id", "date", "time", "event", "BPD"]
-data_static = data_static.drop(columns_to_drop, axis=1)
-
-
-## Logistic regression
 # Split data into features and target
-X = data_static.drop("BPD_binary", axis=1)
-y = data_static["BPD_binary"]
+X = data_static.loc[:, selected_parameters]  # .drop("y", axis=1)
+y = data_static["y"]
 
 # Create logistic regression model
-log_reg = LogisticRegression()
+log_reg = LogisticRegression(multi_class="ovr", max_iter=10000)
 
-# Preprocess data for use in logistic regression
-X = preprocessing.scale(X)
+# Define parameter search space
+log_reg_parameters = {}  # {'penalty': ['l1', 'l2', 'elasticnet']}
 
-# Fit model using nested cross-validation
-y_pred = cross_val_predict(log_reg, X, y, cv=5)
+model_scores = nested_CV(
+    model=log_reg,
+    parameters=log_reg_parameters,
+    inner_cv=5,
+    outer_cv=5,
+    X=X,
+    y=y,
+    verbose=0,
+)
 
-# Calculate AUC score
-auc_score = roc_auc_score(y, y_pred)
-print("AUC score: ", auc_score)
+# <codecell> Print Scores
+# Print Scores
 
-# Calculate ROC curve
-fpr, tpr, thresholds = roc_curve(y, y_pred)
-
-# Calculate accuracy
-accuracy = cross_val_score(log_reg, X, y, cv=5, scoring="accuracy")
-print("Accuracy: ", accuracy.mean())
-
-# Calculate precision
-precision = cross_val_score(log_reg, X, y, cv=5, scoring="precision")
-print("Precision: ", precision.mean())
-
-# Calculate recall
-recall = cross_val_score(log_reg, X, y, cv=5, scoring="recall")
-print("Recall: ", recall.mean())
-
-# Calculate F1 score
-f1 = cross_val_score(log_reg, X, y, cv=5, scoring="f1")
-print("F1 score: ", f1.mean())
-
-# Plot ROC curve
-
-plt.plot(fpr, tpr, linewidth=2, label=None)
-plt.plot([0, 1], [0, 1], "k--")
-plt.axis([0, 1, 0, 1])
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.show()
+print_scores(model_scores)
 
 
-## Export model
-# Export model to pickle file using pathlib to specify path relative to script
-model_folder = "models"  # Specify folder name
-model_name = "log_reg_static.pkl"  # Specify file name
-pickle.dump(
-    log_reg, open(script_location / model_folder / model_name, "wb")
-)  # Export model
+# # Plot ROC curve
 
-## Save model metrics to txt file
-metrics_folder = "metrics"  # Specify folder name
-# Create sring with date and time to append to file name
-now = datetime.now()
-date_time = now.strftime("%Y%m%d_%H%M%S")
-metrics_name = "log_reg_static_" + date_time + ".txt"  # Specify file name
-# Create txt file
-with open(script_location / metrics_folder / metrics_name, "w") as f:
-    print("AUC score: ", auc_score, file=f)
-    print("Accuracy: ", accuracy.mean(), file=f)
-    print("Precision: ", precision.mean(), file=f)
-    print("Recall: ", recall.mean(), file=f)
-    print("F1 score: ", f1.mean(), file=f)
+# plt.plot(fpr, tpr, linewidth=2, label=None)
+# plt.plot([0, 1], [0, 1], "k--")
+# plt.axis([0, 1, 0, 1])
+# plt.xlabel("False Positive Rate")
+# plt.ylabel("True Positive Rate")
+# plt.show()
 
-# Save plot
-plot_name = "log_reg_static" + date_time + ".png"  # Specify file name
-plt.savefig(script_location / metrics_folder / plot_name)
+
+# <codecell> Export model and metrics
+# Export model
+
+if export:
+    model = model_scores["estimator"][
+        model_scores["test_accuracy"].argmax()
+    ].best_estimator_
+
+    export_model_and_scores(
+        name_model=name_model,
+        model=model,
+        model_scores=model_scores,
+        selected_parameters=selected_parameters,
+    )
+
+    # # Save plot
+    # plot_name = name_models + date_time + ".png"
+    # plt.savefig(project_location / metrics_folder / plot_name)
+
+# %%
