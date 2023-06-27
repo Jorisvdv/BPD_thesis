@@ -43,11 +43,11 @@ def main(cfg: DictConfig) -> None:
     # Import data from csv file using pathlib to specify path relative to script
     # find location of script and set manual location for use in ipython
 
-    # # Read csv file
-    # data_static = load_static(cleaned_data=True)
+    # Read csv file
+    data_static = load_static(cleaned_data=True)
 
-    # Load iris dataset as toy example for local testing
-    from sklearn.datasets import load_iris
+    # # Load iris dataset as toy example for local testing
+    # from sklearn.datasets import load_iris
 
     data_static = load_iris(as_frame=True).frame
     # Select only two classes
@@ -60,9 +60,10 @@ def main(cfg: DictConfig) -> None:
     print(*cfg.model_parameters.selected_features)
 
     # Split data into features and target
-    X = data_static.loc[:, cfg.model_parameters.selected_features]  # .drop("y", axis=1)
-    y = data_static[cfg.model_parameters.target].where(data_static["target"] == 1, 0)
-    # FIXME: This is a hack to make the iris dataset work with the current code
+    X = data_static.loc[:, cfg.model_parameters.selected_features]
+    y = data_static[
+        cfg.model_parameters.target
+    ]  # .where(data_static["target"] == 1, 0) adjust for multiclass in iris dataset
 
     # <codecell> Create Logistic regression
 

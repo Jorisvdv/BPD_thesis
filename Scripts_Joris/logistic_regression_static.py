@@ -84,7 +84,7 @@ log_reg = LogisticRegression(multi_class="ovr", max_iter=10000)
 # Define parameter search space
 log_reg_parameters = {}  # {'penalty': ['l1', 'l2', 'elasticnet']}
 
-model_scores = nested_CV(
+models_and_scores = nested_CV(
     model=log_reg,
     parameters=log_reg_parameters,
     inner_cv=5,
@@ -97,13 +97,13 @@ model_scores = nested_CV(
 # <codecell> Print Scores
 # Print Scores
 
-print_scores(model_scores)
+print_scores(models_and_scores)
 
 # <codecell> Plot ROC curve
 # Plot ROC curve
 
-fig_test = create_roc_curve(model_scores=model_scores, model_name=NAME_MODEL)
-plt.show()
+fig_test = create_roc_curve(model_scores=models_and_scores, model_name=NAME_MODEL)
+# plt.show()
 # fig_test.savefig("roc_curve_test.png")
 
 
@@ -112,19 +112,12 @@ plt.show()
 
 # Select model with highest test accuracy to export
 if EXPORT:
-    model = model_scores["estimator"][
-        model_scores["test_accuracy"].argmax()
-    ].best_estimator_
-
     export_model_and_scores(
         name_model=NAME_MODEL,
-        model=model,
-        model_scores=model_scores,
-        selected_parameters=SELECTED_PARAMETERS,
+        models_and_scores=models_and_scores,
+        save_model=True,
+        save_scores=True,
+        # selected_parameters=SELECTED_PARAMETERS, # Can get this directly from model
     )
-
-    # # Save plot
-    # plot_name = name_models + date_time + ".png"
-    # plt.savefig(project_location / metrics_folder / plot_name)
 
 # %%
