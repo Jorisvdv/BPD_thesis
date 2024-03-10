@@ -1,0 +1,21 @@
+defaults:
+  - _self_
+  - dataset: temporal_pca_day_7 #static_no_meds
+  - model: logistic_regression_ml
+  - training_settings
+  # - metrics
+
+feature_selection: true
+scaler: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset: glob([temporal_pca_day_*]) # glob([temporal_day_*,static_no_meds,temporal_pca,temporal_pca_only,temporal_only,temporal_resp,temporal_pca_resp ])
+      model: logistic_regression_ml, RF_ml #, SVM_ml
+      feature_selection: false, true
+      scaler: false, true
+  sweep:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${dataset.name}_${model.name_model}_feat_sel_${feature_selection}_scale_${scaler}

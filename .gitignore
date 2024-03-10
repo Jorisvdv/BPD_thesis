@@ -368,8 +368,8 @@ MyDRE_RDP.py
 MyDRE_RDP.app
 app.ico
 
-# Local models and metrics
-models/*
+# Local metrics
+
 metrics/*
 
 # Lightning-Hydra-Template
@@ -379,4 +379,10 @@ configs/local/default.yaml
 /logs/
 .env
 
-
+/archive/
+/reports/
+/processed_data/
+graph.py
+reports_export.zip
+ROC_AUC_*.png
+ROC_AUC_Scores.svg

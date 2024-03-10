@@ -1,0 +1,22 @@
+cleaned_name : 'temporal_features'
+selected_features:
+  - PT_geslacht
+  - GA_exact
+  - Gebgew
+  - meerlaantal
+  - smlga
+  - ANS
+  - A_5
+  # - Furosemide
+  # - DEXA
+  - FiO2_filled_mean_01
+  - FiO2_filled_var_01
+  - SpO2FiO2dev_mean_01
+  - SpO2FiO2dev_var_01
+  - SpO2_filled_mean_01
+  - SpO2_filled_var_01
+  - hyperoxic_burden_01
+  - hypoxic_burden_01
+
+target: 'y'
+name: 'Temporal_features_day_1'

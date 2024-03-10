@@ -1,0 +1,16 @@
+name_model: "Random Forest"
+
+
+param_grid:
+  estimator__n_estimators:
+    - 10
+    - 100
+    - 1000
+
+model:
+  _target_: sklearn.ensemble.RandomForestClassifier
+  random_state: ${random_state}
+
+
+
+

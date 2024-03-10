@@ -1,0 +1,29 @@
+cleaned_name : 'temporal_pca'
+selected_features:
+  - PT_geslacht
+  - GA_exact
+  - Gebgew
+  - meerlaantal
+  - smlga
+  - ANS
+  - A_5
+  # - Furosemide
+  # - DEXA
+
+  # - PT_gb
+  - Day1_PC0
+  - Day1_PC1
+  # - Day2_PC0
+  # - Day2_PC1
+  # - Day3_PC0
+  # - Day3_PC1
+  # - Day4_PC0
+  # - Day4_PC1
+  # - Day5_PC0
+  # - Day5_PC1
+  # - Day6_PC0
+  # - Day6_PC1
+  # - Day7_PC0
+  # - Day7_PC1
+target: 'y'
+name: 'Temporal_features_pca_1'

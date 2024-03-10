@@ -1,0 +1,13 @@
+cleaned_name : 'temporal'
+selected_features:
+  # - 'PT_geslacht'
+  # - 'GA_exact'
+  # - 'Gebgew'
+  # - 'meerlaantal'
+  # - 'smlga'
+  # - 'ANS'
+  # - 'A_5'
+  - 'Furosemide'
+  - 'DEXA'
+target: 'y'
+name: 'Static_only_meds'

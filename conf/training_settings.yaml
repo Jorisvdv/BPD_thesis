@@ -1,0 +1,4 @@
+random_state : 42
+verbose : 1
+inner_cv : 5
+outer_cv: 5

@@ -1,0 +1,41 @@
+name_model: "Logistic regression"
+
+
+
+param_grid:
+  estimator__penalty:
+    # - l1
+    - l2
+  estimator__C:
+    - 0.001
+    - 0.01
+    - 0.1
+    - 1
+    - 10
+    - 100
+    - 1000
+  
+# - penalty:
+#   - elasticnet
+#   l1_ratio:
+#   - 0.1
+#   - 0.2
+#   - 0.3
+#   - 0.4
+#   - 0.5
+#   - 0.6
+#   - 0.7
+#   - 0.8
+#   - 0.9
+#   C:
+#   - 0.001
+#   - 0.01
+#   - 0.1
+#   - 1
+#   - 10
+#   - 100
+#   - 1000
+
+model:
+  _target_: sklearn.linear_model.LogisticRegression
+  max_iter: 10000000
